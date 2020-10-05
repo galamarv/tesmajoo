@@ -39,7 +39,7 @@ func (u *User) Prepare() {
 	u.ID = 0
 	u.NamaLengkap = html.EscapeString(strings.TrimSpace(u.NamaLengkap))
 	u.Username = html.EscapeString(strings.TrimSpace(u.Username))
-	u.Foto = html.EscapeString(strings.TrimSpace(u.Username))
+	u.Foto = html.EscapeString(strings.TrimSpace(u.Foto))
 }
 
 func (u *User) Validate(action string) error {
@@ -63,7 +63,11 @@ func (u *User) Validate(action string) error {
 			return errors.New("Required Username")
 		}
 		return nil
-
+	case "uploadfoto":
+		if u.Foto == "" {
+			return errors.New("Required Foto")
+		}
+		return nil
 	default:
 		if u.NamaLengkap == "" {
 			return errors.New("Required Nama Lengkap")
@@ -119,9 +123,32 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 	}
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
-			"password":    u.Password,
-			"namalengkap": u.NamaLengkap,
-			"username":    u.Username,
+			"NamaLengkap": u.NamaLengkap,
+			"Password":    u.Password,
+			"Username":    u.Username,
+		},
+	)
+	if db.Error != nil {
+		return &User{}, db.Error
+	}
+	// This is the display the updated user
+	err = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&u).Error
+	if err != nil {
+		return &User{}, err
+	}
+	return u, nil
+}
+
+func (u *User) UpdateFotoUser(db *gorm.DB, uid uint32) (*User, error) {
+
+	// To hash the password
+	err := u.BeforeSave()
+	if err != nil {
+		log.Fatal(err)
+	}
+	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
+		map[string]interface{}{
+			"Foto": u.Foto,
 		},
 	)
 	if db.Error != nil {
